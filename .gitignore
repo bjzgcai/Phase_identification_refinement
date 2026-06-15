@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs and runtime outputs
+*.log
+.done
+command.txt
+stdout.log
+stderr.log
+
+# Generated refinement / analysis outputs
+result_RL_rank/
+analysis_results/
+outputs/
+RRUFF_data/
+*.png
+*.pdf
+*.svg
+*.xy
+*_Refined.txt
+*_Refined.xy
+*_Refined.png
+stage*_output/
+yfsf_refined_cifs/
+
+# External data not redistributed in the public repository
+data/mp_spacegroup.json
+data/entries_dict.json
+data/MP_data/
+
+# External XQueryer baseline code is not redistributed here
+src/single_phase_xrd_identification/xqueryer/
+
+# Local temporary files
+*.pkl
+*.db
+.env
+.env.*
+.DS_Store
+.ipynb_checkpoints/
+
+# Training checkpoints generated during new runs.
+# The released Stage 1 weight is explicitly kept in the repository/LFS.
+checkpoint_*.pth
+model_stage1_final.pth
+!src/single_phase_xrd_identification/stage1/checkpoints_stage1/
+!src/single_phase_xrd_identification/stage1/checkpoints_stage1/model_best.pth

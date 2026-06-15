@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "single-phase-xrd-identification"
+version = "0.1.0"
+description = "Single-phase XRD identification, candidate retrieval, and refinement tools."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Project contributors" }]
+dependencies = [
+  "numpy",
+  "scipy",
+  "matplotlib",
+  "torch",
+  "pymatgen",
+  "pybaselines",
+  "tqdm",
+  "pandas",
+  "scikit-learn",
+  "ase",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

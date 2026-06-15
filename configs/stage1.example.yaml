@@ -1,0 +1,9 @@
+data:
+  train_db: data/trainD.db
+  val_db: data/valueV.db
+training:
+  epochs: 100
+  batch_size: 64
+  learning_rate: 0.0001
+outputs:
+  checkpoint_dir: outputs/stage1/checkpoints
