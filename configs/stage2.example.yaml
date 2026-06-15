@@ -1,0 +1,5 @@
+model: outputs/stage1/model_best.pth
+strict_dir: data/Exp_data
+entries_dict: data/entries_dict.json
+label_formula_csv: data/label_formula.csv
+out_dir: outputs/stage2/analysis_results

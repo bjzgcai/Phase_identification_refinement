@@ -1,0 +1,6 @@
+xy: data/Exp_data/R040009.csv
+main: data/RRUFF_data/R040009/R040009.cif
+imp: data/RRUFF_data/R040009
+wavelength: 1.541838
+max_candidates: 10
+max_phases_in_mix: 4
