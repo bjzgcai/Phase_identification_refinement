@@ -32,8 +32,6 @@ For GPU training, install the PyTorch build matching your CUDA environment from 
 
 The full experimental/reference data used by this project comes from external datasets and should be downloaded separately. In particular, the public repository does not redistribute:
 
-- `data/mp_spacegroup.json`
-- `data/entries_dict.json`
 - `data/MP_data/`
 - `src/single_phase_xrd_identification/xqueryer/`
 
