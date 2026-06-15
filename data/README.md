@@ -22,5 +22,6 @@ match.txt             RRUFF-to-MP strict matching pairs, if permitted
   **If an unstable connection interrupts the download of this folder, a ZIP archive is also available on [HuggingFace](https://huggingface.co/datasets/caobin/PyXplore/resolve/main/MP_data.zip?download=true).**
 
 - `MP_data/` is large and contains many small files.
+- `mp_spacegroup.json` and `entries_dict.json` are not redistributed because they contain third-party metadata/CIF content.
 - `match.txt` records strict RRUFFID <-> MPID matches used for evaluation/reference.
-- Generated refinement candidate folders such as `RRUFF_data/` are not included here by default. They can be regenerated with `scripts/build_rruff_data.py`.
+- Generated refinement candidate folders such as `RRUFF_data/` are not included here by default. They can be regenerated with `single_phase_xrd_identification.refinement.build_rruff_data`.

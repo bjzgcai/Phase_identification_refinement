@@ -28,7 +28,6 @@ pip install -r requirements.txt
 
 For GPU training, install the PyTorch build matching your CUDA environment from the official PyTorch instructions.
 
-
 ## Computational Workflow
 
 The project follows a three-stage identification-to-refinement workflow.
