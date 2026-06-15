@@ -7,8 +7,6 @@ This directory is the expected local location for external data. The public repo
 ```text
 Exp_data/             RRUFF experimental spectra and matching *_CIF.txt files, external
 MP_data/              MP-derived reference spectra / CIF text files, external
-mp_spacegroup.json    MP metadata and CIF strings, external and ignored by Git
-entries_dict.json     label-to-mp-id mapping, external and ignored by Git
 match.txt             RRUFF-to-MP strict matching pairs, if permitted
 ```
 
