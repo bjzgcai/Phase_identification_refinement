@@ -74,7 +74,7 @@ The project follows a three-stage identification-to-refinement workflow.
 
 ## Space-Group and Crystal-System Analysis
 
-Additional analysis scripts report top-1/top-10 accuracy by space group and crystal system for both stages. Because the script filenames contain a hyphen, run them by file path rather than `python -m`.
+Additional analysis scripts report top-1/top-10 accuracy by space group and crystal system for both stages. Missing MP/space-group records are written to separate files and skipped from the accuracy denominators rather than being assigned to P1. Because the script filenames contain a hyphen, run them by file path rather than `python -m`.
 
 Stage 1 analysis reads the Stage 1 top-k CSV, maps labels to MP IDs through `entries_dict.json`, then compares predicted and true space-group / crystal-system metadata from `mp_spacegroup.json`.
 

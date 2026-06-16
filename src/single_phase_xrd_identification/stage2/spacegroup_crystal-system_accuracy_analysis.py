@@ -24,7 +24,6 @@ CRYSTAL_SYSTEMS = [
     ("cubic", "立方晶系"),
 ]
 
-FORCED_P1_MPIDS = {"mp-1255268", "mp-1247833"}
 
 SYMBOL_FIXES = {
     "Fm3m": "Fm-3m",
@@ -148,8 +147,8 @@ def main() -> None:
 
     true_spacegroups = read_true_spacegroups(args.exp_data_dir, set(by_rruff_id))
     records = []
-    forced_p1_rows = []
     missing_mp_rows = []
+    skipped_no_usable_predictions = []
 
     for rruff_id, candidates in sorted(by_rruff_id.items()):
         truth = true_spacegroups[rruff_id]
@@ -157,36 +156,7 @@ def main() -> None:
         for candidate in candidates:
             mpid = candidate["pred_mpid"]
             mp_info = mp_spacegroups.get(mpid)
-            forced_p1 = mpid in FORCED_P1_MPIDS and mp_info is None
-            if forced_p1:
-                pred = {
-                    "rank": int(candidate["rank"]),
-                    "mpid": mpid,
-                    "symbol": "P1",
-                    "number": 1,
-                    "crystal_system": "triclinic",
-                    "forced_correct": True,
-                }
-                forced_p1_rows.append(
-                    {
-                        "rruff_id": rruff_id,
-                        "rank": candidate["rank"],
-                        "pred_mpid": mpid,
-                        "assigned_space_group": "P1",
-                        "assigned_space_group_number": 1,
-                    }
-                )
-            elif mp_info:
-                pred_number = int(mp_info["space_group"]["number"])
-                pred = {
-                    "rank": int(candidate["rank"]),
-                    "mpid": mpid,
-                    "symbol": mp_info["space_group"]["symbol"],
-                    "number": pred_number,
-                    "crystal_system": crystal_system_from_number(pred_number),
-                    "forced_correct": False,
-                }
-            else:
+            if not mp_info:
                 missing_mp_rows.append(
                     {
                         "rruff_id": rruff_id,
@@ -195,22 +165,30 @@ def main() -> None:
                     }
                 )
                 continue
+
+            pred_number = int(mp_info["space_group"]["number"])
+            pred = {
+                "rank": int(candidate["rank"]),
+                "mpid": mpid,
+                "symbol": mp_info["space_group"]["symbol"],
+                "number": pred_number,
+                "crystal_system": crystal_system_from_number(pred_number),
+            }
             predictions.append(pred)
 
         if not predictions:
-            raise ValueError(f"No usable predictions for {rruff_id}")
+            skipped_no_usable_predictions.append({"rruff_id": rruff_id, "candidate_count": len(candidates)})
+            continue
 
         top1 = predictions[0]
-        sg_top1 = top1["number"] == truth["number"] or top1["forced_correct"]
+        sg_top1 = top1["number"] == truth["number"]
         sg_top10 = any(
-            pred["number"] == truth["number"] or pred["forced_correct"]
+            pred["number"] == truth["number"]
             for pred in predictions[:10]
         )
-        cs_top1 = (
-            top1["crystal_system"] == truth["crystal_system"] or top1["forced_correct"]
-        )
+        cs_top1 = top1["crystal_system"] == truth["crystal_system"]
         cs_top10 = any(
-            pred["crystal_system"] == truth["crystal_system"] or pred["forced_correct"]
+            pred["crystal_system"] == truth["crystal_system"]
             for pred in predictions[:10]
         )
         records.append(
@@ -234,8 +212,8 @@ def main() -> None:
         "candidate_rows": len(candidate_rows),
         "unique_rruff_ids": len(by_rruff_id),
         "evaluated_samples": len(records),
-        "forced_p1_candidates": len(forced_p1_rows),
-        "unresolved_missing_mp_candidates": len(missing_mp_rows),
+        "missing_mp_candidates_skipped": len(missing_mp_rows),
+        "skipped_samples_no_usable_predictions": len(skipped_no_usable_predictions),
         "space_group_top1": accuracy(records, "space_group_top1_correct"),
         "space_group_top10": accuracy(records, "space_group_top10_correct"),
         "crystal_system_top1": accuracy(records, "crystal_system_top1_correct"),
@@ -291,8 +269,7 @@ def main() -> None:
         },
         "policy": {
             "space_group_match": "Compare by international space group number.",
-            "forced_p1_mpids": sorted(FORCED_P1_MPIDS),
-            "forced_p1_rule": "If a forced mp-id is missing from mp_spacegroup.json, assign P1 and count it as correct.",
+            "missing_prediction_rule": "Missing predicted MP candidates are skipped and are not assigned to P1 or counted as correct/incorrect.",
         },
         "overall": overall,
         "by_crystal_system": by_system_rows,
@@ -307,26 +284,35 @@ def main() -> None:
         list(by_system_rows[0].keys()),
         by_system_rows,
     )
+    sample_detail_fields = [
+        "rruff_id",
+        "true_space_group",
+        "true_space_group_number",
+        "true_crystal_system",
+        "top1_mpid",
+        "top1_space_group",
+        "top1_space_group_number",
+        "top1_crystal_system",
+        "space_group_top1_correct",
+        "space_group_top10_correct",
+        "crystal_system_top1_correct",
+        "crystal_system_top10_correct",
+    ]
     write_csv(
         args.output_dir / "spacegroup_accuracy_sample_details.csv",
-        list(records[0].keys()),
+        sample_detail_fields,
         records,
     )
+    distribution_fields = [
+        "true_space_group",
+        "true_space_group_number",
+        "true_crystal_system",
+        "n",
+    ]
     write_csv(
         args.output_dir / "true_spacegroup_distribution.csv",
-        list(distribution_rows[0].keys()),
+        distribution_fields,
         distribution_rows,
-    )
-    write_csv(
-        args.output_dir / "forced_p1_candidates.csv",
-        [
-            "rruff_id",
-            "rank",
-            "pred_mpid",
-            "assigned_space_group",
-            "assigned_space_group_number",
-        ],
-        forced_p1_rows,
     )
     if missing_mp_rows:
         write_csv(
@@ -334,12 +320,17 @@ def main() -> None:
             ["rruff_id", "rank", "pred_mpid"],
             missing_mp_rows,
         )
+    if skipped_no_usable_predictions:
+        write_csv(
+            args.output_dir / "skipped_samples_no_usable_predictions.csv",
+            ["rruff_id", "candidate_count"],
+            skipped_no_usable_predictions,
+        )
 
     report_lines = [
         "# Stage2 Space Group Accuracy",
         "",
-        "Policy: compare space groups by international number. Missing forced mp-ids "
-        "`mp-1247833` and `mp-1255268` are assigned to `P1` and counted as correct.",
+        "Policy: compare space groups by international number. Missing MP candidates are skipped, not assigned to P1.",
         "",
         "## Overall",
         "",
@@ -384,15 +375,12 @@ def main() -> None:
     report_lines.extend(
         [
             "",
-            "## Forced P1 Candidates",
+            "## Missing Candidates",
             "",
-            "| RRUFF ID | Rank | MP ID |",
-            "|---|---:|---|",
+            f"- Missing MP candidates skipped: {len(missing_mp_rows)}",
+            f"- Samples skipped because all candidates were missing: {len(skipped_no_usable_predictions)}",
         ]
     )
-    for row in forced_p1_rows:
-        report_lines.append(f"| {row['rruff_id']} | {row['rank']} | {row['pred_mpid']} |")
-    report_lines.append("")
     (args.output_dir / "spacegroup_accuracy_report.md").write_text(
         "\n".join(report_lines),
         encoding="utf-8",

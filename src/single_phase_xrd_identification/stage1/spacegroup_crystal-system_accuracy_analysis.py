@@ -48,27 +48,15 @@ def label_to_mpid(label: str | int, entries: dict) -> str | None:
     return value
 
 
-def sg_info_from_mpid(mpid: str | None, mp_spacegroups: dict) -> dict:
+def sg_info_from_mpid(mpid: str | None, mp_spacegroups: dict) -> dict | None:
     info = mp_spacegroups.get(mpid) if mpid else None
     if not info:
-        return {
-            "mpid": mpid,
-            "space_group": "P1",
-            "space_group_number": 1,
-            "crystal_system": "triclinic",
-            "missing": True,
-        }
+        return None
 
     space_group = info.get("space_group") or {}
     number = space_group.get("number")
     if number is None:
-        return {
-            "mpid": mpid,
-            "space_group": "P1",
-            "space_group_number": 1,
-            "crystal_system": "triclinic",
-            "missing": True,
-        }
+        return None
 
     number = int(number)
     crystal_system = (info.get("crystal_system") or {}).get("symbol")
@@ -77,9 +65,7 @@ def sg_info_from_mpid(mpid: str | None, mp_spacegroups: dict) -> dict:
         "space_group": space_group.get("symbol") or "",
         "space_group_number": number,
         "crystal_system": crystal_system or crystal_system_from_number(number),
-        "missing": False,
     }
-
 
 def init_stats() -> dict:
     return {"n": 0, "sg_top1": 0, "sg_top10": 0, "cs_top1": 0, "cs_top10": 0}
@@ -122,8 +108,8 @@ def main() -> None:
     missing_true = Counter()
     missing_pred = Counter()
     missing_label = Counter()
-    forced_pred_hits = 0
-    forced_top1_hits = 0
+    skipped_missing_true = 0
+    skipped_no_usable_predictions = 0
     bad_top10_len = 0
     sample_details = []
 
@@ -137,8 +123,10 @@ def main() -> None:
             if true_mpid is None:
                 missing_label["true_label"] += 1
             true_info = sg_info_from_mpid(true_mpid, mp_spacegroups)
-            if true_info["missing"]:
-                missing_true[true_info["mpid"]] += 1
+            if true_info is None:
+                missing_true[true_mpid or f"label:{row['y']}"] += 1
+                skipped_missing_true += 1
+                continue
 
             labels = [item for item in str(row["top10_idx"]).split(";") if item != ""]
             if len(labels) < 10:
@@ -150,28 +138,26 @@ def main() -> None:
                 if pred_mpid is None:
                     missing_label["pred_label"] += 1
                 pred_info = sg_info_from_mpid(pred_mpid, mp_spacegroups)
-                if pred_info["missing"]:
-                    missing_pred[pred_info["mpid"]] += 1
+                if pred_info is None:
+                    missing_pred[pred_mpid or f"label:{label}"] += 1
+                    continue
                 predictions.append(pred_info)
 
             if not predictions:
+                skipped_no_usable_predictions += 1
                 continue
 
             top1 = predictions[0]
-            sg_top1 = top1["missing"] or top1["space_group_number"] == true_info["space_group_number"]
+            sg_top1 = top1["space_group_number"] == true_info["space_group_number"]
             sg_top10 = any(
-                pred["missing"] or pred["space_group_number"] == true_info["space_group_number"]
+                pred["space_group_number"] == true_info["space_group_number"]
                 for pred in predictions
             )
-            cs_top1 = top1["missing"] or top1["crystal_system"] == true_info["crystal_system"]
+            cs_top1 = top1["crystal_system"] == true_info["crystal_system"]
             cs_top10 = any(
-                pred["missing"] or pred["crystal_system"] == true_info["crystal_system"]
+                pred["crystal_system"] == true_info["crystal_system"]
                 for pred in predictions
             )
-
-            if top1["missing"]:
-                forced_top1_hits += 1
-            forced_pred_hits += sum(1 for pred in predictions if pred["missing"])
 
             for stats in (overall, by_system[true_info["crystal_system"]]):
                 stats["n"] += 1
@@ -192,7 +178,6 @@ def main() -> None:
                         "top1_space_group": top1["space_group"],
                         "top1_space_group_number": top1["space_group_number"],
                         "top1_crystal_system": top1["crystal_system"],
-                        "top1_forced_p1": top1["missing"],
                         "space_group_top1_correct": sg_top1,
                         "space_group_top10_correct": sg_top10,
                         "crystal_system_top1_correct": cs_top1,
@@ -229,8 +214,8 @@ def main() -> None:
         "missing_true_mpid_or_sg_unique": len(missing_true),
         "missing_pred_mpid_or_sg_occurrences": sum(missing_pred.values()),
         "missing_pred_mpid_or_sg_unique": len(missing_pred),
-        "forced_missing_pred_candidates_counted_correct": forced_pred_hits,
-        "forced_missing_top1_counted_correct": forced_top1_hits,
+        "skipped_samples_missing_true_spacegroup": skipped_missing_true,
+        "skipped_samples_no_usable_predictions": skipped_no_usable_predictions,
         "missing_label_mapping": dict(missing_label),
     }
     for key in ["sg_top1", "sg_top10", "cs_top1", "cs_top10"]:
@@ -249,7 +234,7 @@ def main() -> None:
         "policy": {
             "label_mapping": "Label -> entries_dict value with .cif suffix removed -> mp-id.",
             "match": "Compare space groups by space_group.number; compare crystal systems by symbol.",
-            "missing_prediction_rule": "If a predicted mp-id has no space group/crystal system, assign P1/triclinic and count that prediction as correct.",
+            "missing_prediction_rule": "Missing true samples are skipped; missing predicted candidates are skipped and not counted as correct or incorrect.",
         },
         "overall": overall_summary,
         "by_crystal_system": by_system_rows,
@@ -275,7 +260,7 @@ def main() -> None:
     lines = [
         "# Stage1 Space Group Accuracy",
         "",
-        "Policy: labels are mapped through data/entries_dict.json; predicted mp-ids missing from mp_spacegroup.json are assigned P1 and counted as correct.",
+        "Policy: labels are mapped through data/entries_dict.json; missing true samples and missing predicted candidates are skipped, not assigned to P1.",
         "",
         "## Overall",
         "",
@@ -313,8 +298,9 @@ def main() -> None:
         "",
         f"- Samples: {overall_summary['samples']}",
         f"- Rows with fewer than 10 top-k labels: {overall_summary['bad_top10_len']}",
-        f"- Missing predicted mp-id/space-group occurrences counted as correct: {overall_summary['forced_missing_pred_candidates_counted_correct']}",
-        f"- Missing top-1 prediction occurrences counted as correct: {overall_summary['forced_missing_top1_counted_correct']}",
+        f"- Skipped samples with missing true space group: {overall_summary['skipped_samples_missing_true_spacegroup']}",
+        f"- Skipped samples with no usable predictions: {overall_summary['skipped_samples_no_usable_predictions']}",
+        f"- Missing predicted mp-id/space-group occurrences skipped: {overall_summary['missing_pred_mpid_or_sg_occurrences']}",
         f"- Missing label mappings: {overall_summary['missing_label_mapping']}",
         "",
     ])
