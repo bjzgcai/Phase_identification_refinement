@@ -72,6 +72,30 @@ The project follows a three-stage identification-to-refinement workflow.
      --wl 1.541838
    ```
 
+## Space-Group and Crystal-System Analysis
+
+Additional analysis scripts report top-1/top-10 accuracy by space group and crystal system for both stages. Because the script filenames contain a hyphen, run them by file path rather than `python -m`.
+
+Stage 1 analysis reads the Stage 1 top-k CSV, maps labels to MP IDs through `entries_dict.json`, then compares predicted and true space-group / crystal-system metadata from `mp_spacegroup.json`.
+
+```bash
+python src/single_phase_xrd_identification/stage1/spacegroup_crystal-system_accuracy_analysis.py \
+  --temp-rank-csv src/single_phase_xrd_identification/stage1/analysis_results/temp_rank_0.csv \
+  --entries-json data/entries_dict.json \
+  --mp-spacegroup-json data/mp_spacegroup.json \
+  --output-dir src/single_phase_xrd_identification/stage1/analysis
+```
+
+Stage 2 analysis reads the experimental-spectrum top-10 candidate CSV, parses the true RRUFF space group from `data/Exp_data/*_CIF.txt`, and compares it with each predicted MP candidate.
+
+```bash
+python src/single_phase_xrd_identification/stage2/spacegroup_crystal-system_accuracy_analysis.py \
+  --top10-csv src/single_phase_xrd_identification/stage2/analysis_results/top10_candidates.csv \
+  --exp-data-dir data/Exp_data \
+  --mp-spacegroup-json data/mp_spacegroup.json \
+  --output-dir src/single_phase_xrd_identification/stage2/analysis
+```
+
 ## Data
 
 The full experimental/reference data used by this project comes from external datasets and should be downloaded separately. In particular, the public repository does not redistribute:
