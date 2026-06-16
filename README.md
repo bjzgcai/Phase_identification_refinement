@@ -2,7 +2,7 @@
 
 A research codebase for single-phase X-ray diffraction identification, candidate retrieval, and Rietveld-style refinement on experimental RRUFF spectra.
 
-This public layout includes the project source code and Stage 1 pretrained weights. Large or third-party data files are not redistributed in Git; download them from their original sources as described below.
+This public layout includes the project source code, a curated `data/Exp_data/` RRUFF experimental subset, `data/match.txt`, and the Stage 1 pretrained weights needed to reproduce the documented workflow. The complete upstream datasets are not mirrored here; third-party data and model artifacts remain subject to their original licenses, database terms, and citation requirements. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [docs/DATA.md](docs/DATA.md).
 
 ## Repository Layout
 
@@ -26,7 +26,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For GPU training, install the PyTorch build matching your CUDA environment from the official PyTorch instructions.
+For a pinned reference environment, use `requirements-lock.txt`. The checked reference environment is Python 3.10.19 with PyTorch 2.11.0+cu128/CUDA 12.8. For GPU training, install the PyTorch build matching your CUDA environment from the official PyTorch instructions.
+
+For development smoke tests, install the small test dependency set and run:
+
+```bash
+pip install -r requirements-dev.txt
+PYTHONPATH=src pytest tests
+```
+
+## Security Notes
+
+Only load checkpoints from trusted sources. Public verification scripts use `torch.load(..., weights_only=True)` through a compatibility wrapper when supported by PyTorch. Local training resume checkpoints may include optimizer/scaler state and are treated as trusted local artifacts. The Stage 2 memory bank is a locally generated pickle file; do not accept or load externally supplied pickle files.
 
 ## Computational Workflow
 
@@ -96,9 +107,15 @@ python src/single_phase_xrd_identification/stage2/spacegroup_crystal-system_accu
   --output-dir src/single_phase_xrd_identification/stage2/analysis
 ```
 
-## Data
+## Data and Artifacts
 
-The full experimental/reference data used by this project comes from external datasets and should be downloaded separately. In particular, the public repository does not redistribute:
+This repository intentionally includes the reproducibility artifacts below:
+
+- `data/Exp_data/`: 444 RRUFF experimental spectra and matching `*_CIF.txt` files used by the documented Stage 2/refinement workflow.
+- `data/match.txt`: strict RRUFFID <-> MPID matching pairs used for evaluation/reference.
+- `src/single_phase_xrd_identification/stage1/checkpoints_stage1/model_best.pth`: Stage 1 pretrained `state_dict` checkpoint.
+
+The repository still does not mirror the complete upstream datasets. The following files/directories remain external and must be obtained from their original sources when needed:
 
 - `data/mp_spacegroup.json`
 - `data/entries_dict.json`
@@ -111,7 +128,7 @@ The full experimental/reference data used by this project comes from external da
 For the broader XQueryer/PyXplore dataset, use the official XQueryer dataset link:
 [XQueryer dataset on OneDrive](https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvYy81ZDg2MjYyMzg0NzBiNDllL0V1d09VMTNQM2JoSHNiU2lEMTRON3hZQmZCTEdCYTFjX0VhVkhrbGZUajRxZXc%5FZT0xa3liaFg&id=5D8626238470B49E%21s5d530eecddcf47b8b1b4a20f5e0def16&cid=5D8626238470B49E).
 
-See [docs/DATA.md](docs/DATA.md) for the expected local data layout after download.
+Use `docs/ARTIFACTS_SHA256SUMS.txt` to verify redistributed artifacts. See [docs/DATA.md](docs/DATA.md) for the local data layout and artifact policy.
 
 ## Attribution and Academic Use
 
@@ -122,7 +139,7 @@ Parts of the data preparation and baseline comparison workflow are based on or c
 - Benchmarks: <https://github.com/WPEM/XqueryerBench>
 - Official dataset: [OneDrive](https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvYy81ZDg2MjYyMzg0NzBiNDllL0V1d09VMTNQM2JoSHNiU2lEMTRON3hZQmZCTEdCYTFjX0VhVkhrbGZUajRxZXc%5FZT0xa3liaFg&id=5D8626238470B49E%21s5d530eecddcf47b8b1b4a20f5e0def16&cid=5D8626238470B49E)
 
-RRUFF experimental spectra and Materials Project-derived reference data remain subject to their original licenses, database terms, and citation requirements. This repository only provides code and documentation needed to reproduce the workflow with locally obtained data.
+The MIT license in this repository applies to project source code. Redistributed RRUFF experimental spectra, Materials Project-derived reference metadata, XQueryer/PyXplore-derived matching information, and pretrained weights remain subject to their original licenses, database terms, and citation requirements. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before redistributing these artifacts.
 
 Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The reference structure derived from **XQueryer** serves as the input for further structure determination during the refinement step.
 

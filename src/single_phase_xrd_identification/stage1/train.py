@@ -18,6 +18,7 @@ ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", "..", ".."))
 
 from single_phase_xrd_identification.common.dataset import XRDDataset
 from single_phase_xrd_identification.common.model import PerceiverXRD
+from single_phase_xrd_identification.common.serialization import safe_torch_load
 
 # -----------------------------
 # 配置（你按需改这几行）
@@ -347,7 +348,7 @@ def main():
 
     ckpt_path = os.path.join(CKPT_DIR, "checkpoint_0060.pth")
     if os.path.exists(ckpt_path):
-        checkpoint = torch.load(ckpt_path, map_location=device)
+        checkpoint = safe_torch_load(ckpt_path, map_location=device, trusted=True)
 
         model.module.load_state_dict(checkpoint["model"], strict=True)
         optimizer.load_state_dict(checkpoint["optimizer"])

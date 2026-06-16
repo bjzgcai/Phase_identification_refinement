@@ -24,6 +24,7 @@ from ase.db import connect
 # 引入你的模型和数据集（按你工程现状保持不变）
 from single_phase_xrd_identification.common.dataset import XRDDataset
 from single_phase_xrd_identification.common.model import PerceiverXRD
+from single_phase_xrd_identification.common.serialization import safe_torch_load
 
 # -----------------------------
 # 配置（按需改这几行）
@@ -84,9 +85,9 @@ def load_model(model_path: str, device: torch.device) -> PerceiverXRD:
     if device.type == "cuda":
         local_rank = int(os.environ.get("LOCAL_RANK", 0))
         map_loc = {"cuda:0": f"cuda:{local_rank}"}
-        checkpoint = torch.load(model_path, map_location=map_loc)
+        checkpoint = safe_torch_load(model_path, map_location=map_loc)
     else:
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = safe_torch_load(model_path, map_location=device)
 
     # 兼容：既可能保存的是 state_dict，也可能保存的是 dict(model=..., optimizer=...)
     state_dict = checkpoint

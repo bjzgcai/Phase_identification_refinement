@@ -36,7 +36,7 @@ RRUFF_data/
 stage*_output/
 yfsf_refined_cifs/
 
-# External data not redistributed in the public repository
+# Full external datasets not mirrored in the public repository
 data/mp_spacegroup.json
 data/entries_dict.json
 data/MP_data/

@@ -144,7 +144,11 @@ def build_structure(parsed: ParsedExpCif) -> Structure:
     lattice = Lattice.from_parameters(*parsed.cell)
     try:
         expanded = Structure.from_spacegroup(parsed.space_group, lattice, species, coords)
-    except Exception:
+    except Exception as exc:
+        warnings.warn(
+            f"{parsed.rruff_id}: could not expand space group {parsed.space_group!r}; using raw atom table: {exc}",
+            RuntimeWarning,
+        )
         expanded = Structure(lattice, species, coords)
     return merge_structure_sites(expanded)
 
@@ -157,7 +161,11 @@ def write_rruff_cif(exp_txt: Path, out_path: Path, symprec: float) -> None:
         warnings.simplefilter("ignore")
         try:
             CifWriter(structure, symprec=symprec).write_file(out_path)
-        except Exception:
+        except Exception as exc:
+            warnings.warn(
+                f"{exp_txt}: CifWriter failed with symprec={symprec}; retrying without symmetry refinement: {exc}",
+                RuntimeWarning,
+            )
             CifWriter(structure, symprec=None).write_file(out_path)
 
 
@@ -257,14 +265,14 @@ def build_rruff_data(
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(__file__).resolve().parents[3]
     parser = argparse.ArgumentParser(
         description="Build flat RRUFF_data/RRUFF-id CIF candidate folders from temp_rank_0.csv."
     )
     parser.add_argument("--rank-csv", type=Path, default=repo_root / "stage2/analysis_results/temp_rank_0.csv")
     parser.add_argument("--mp-json", type=Path, default=repo_root / "data/mp_spacegroup.json")
     parser.add_argument("--exp-dir", type=Path, default=repo_root / "data/Exp_data")
-    parser.add_argument("--out-dir", type=Path, default=Path(__file__).resolve().parent / "RRUFF_data")
+    parser.add_argument("--out-dir", type=Path, default=repo_root / "data/RRUFF_data")
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--symprec", type=float, default=0.01)
     parser.add_argument("--overwrite", action="store_true", help="Regenerate folders that already exist.")

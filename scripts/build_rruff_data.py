@@ -144,7 +144,11 @@ def build_structure(parsed: ParsedExpCif) -> Structure:
     lattice = Lattice.from_parameters(*parsed.cell)
     try:
         expanded = Structure.from_spacegroup(parsed.space_group, lattice, species, coords)
-    except Exception:
+    except Exception as exc:
+        warnings.warn(
+            f"{parsed.rruff_id}: could not expand space group {parsed.space_group!r}; using raw atom table: {exc}",
+            RuntimeWarning,
+        )
         expanded = Structure(lattice, species, coords)
     return merge_structure_sites(expanded)
 
@@ -157,7 +161,11 @@ def write_rruff_cif(exp_txt: Path, out_path: Path, symprec: float) -> None:
         warnings.simplefilter("ignore")
         try:
             CifWriter(structure, symprec=symprec).write_file(out_path)
-        except Exception:
+        except Exception as exc:
+            warnings.warn(
+                f"{exp_txt}: CifWriter failed with symprec={symprec}; retrying without symmetry refinement: {exc}",
+                RuntimeWarning,
+            )
             CifWriter(structure, symprec=None).write_file(out_path)
 
 

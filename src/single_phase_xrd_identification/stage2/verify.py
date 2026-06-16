@@ -16,6 +16,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(THIS_DIR, "..", "..", "..", ".."))
 
 from single_phase_xrd_identification.common.dataset_real import XRDDatasetStrict
 from single_phase_xrd_identification.common.model import PerceiverXRD
+from single_phase_xrd_identification.common.serialization import safe_torch_load
 
 # ---------------- DDP ----------------
 def setup_ddp():
@@ -186,9 +187,9 @@ def load_model(model_path: str, device: torch.device, num_classes: int) -> Perce
     model = PerceiverXRD(num_classes=num_classes).to(device)
     if device.type == "cuda":
         local_rank = int(os.environ.get("LOCAL_RANK", 0))
-        ckpt = torch.load(model_path, map_location={"cuda:0": f"cuda:{local_rank}"})
+        ckpt = safe_torch_load(model_path, map_location={"cuda:0": f"cuda:{local_rank}"})
     else:
-        ckpt = torch.load(model_path, map_location=device)
+        ckpt = safe_torch_load(model_path, map_location=device)
 
     state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
     state = {k.replace("module.", ""): v for k, v in state.items()}

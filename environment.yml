@@ -1,0 +1,10 @@
+name: single-phase-xrd-identification
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.10.19
+  - pip
+  - pip:
+      - -r requirements-lock.txt

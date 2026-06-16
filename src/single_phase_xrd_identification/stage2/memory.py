@@ -28,6 +28,7 @@ ROOT_DIR = os.path.abspath(os.path.join(THIS_DIR, "..", "..", "..", ".."))
 
 from single_phase_xrd_identification.common.model import PerceiverXRD
 from single_phase_xrd_identification.common.dataset import XRDDataset
+from single_phase_xrd_identification.common.serialization import safe_torch_load
 
 
 def get_device() -> torch.device:
@@ -115,7 +116,7 @@ def pick_formula_from_db_row(row) -> str:
 
 def load_model(model_path: str, num_classes: int, device: torch.device) -> torch.nn.Module:
     model = PerceiverXRD(num_classes=num_classes).to(device)
-    ckpt = torch.load(model_path, map_location=device)
+    ckpt = safe_torch_load(model_path, map_location=device)
     state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
     missing, unexpected = model.load_state_dict(state, strict=False)
     if missing:
