@@ -17,6 +17,8 @@ match.txt             RRUFF-to-MP strict matching pairs, if permitted
 * `Exp_data`:
   Contains diffraction and structure data of **strictly matched** RRUFF entries. Identified structures share the same elements and lattice constants.
 
+  Data availability and license: RRUFF experimental spectra and the associated structure files remain subject to the original RRUFF/XQueryer data licenses, database terms, and citation requirements. Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The reference structure derived from **XQueryer** serves as the input for further structure determination during the refinement step.
+
 * `MP_data`:
   Contains diffraction and structure data of MP entries.
   **If an unstable connection interrupts the download of this folder, a ZIP archive is also available on [HuggingFace](https://huggingface.co/datasets/caobin/PyXplore/resolve/main/MP_data.zip?download=true).**

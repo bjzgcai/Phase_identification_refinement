@@ -22,6 +22,12 @@ src/single_phase_xrd_identification/stage1/checkpoints_stage1/
 
 The two JSON files under `data/` are intentionally ignored by Git because they contain third-party metadata/CIF content with redistribution constraints.
 
+## Data Availability and License
+
+`data/Exp_data/` contains RRUFF experimental spectra and matching structure files derived from external datasets. These data remain subject to the original RRUFF/XQueryer data licenses, database terms, and citation requirements.
+
+Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The reference structure derived from **XQueryer** serves as the input for further structure determination during the refinement step.
+
 ## Generated Candidate CIFs
 
 `RRUFF_data/` is generated and remains ignored by Git. Regenerate it with:

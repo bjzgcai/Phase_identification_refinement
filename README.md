@@ -124,6 +124,8 @@ Parts of the data preparation and baseline comparison workflow are based on or c
 
 RRUFF experimental spectra and Materials Project-derived reference data remain subject to their original licenses, database terms, and citation requirements. This repository only provides code and documentation needed to reproduce the workflow with locally obtained data.
 
+Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The reference structure derived from **XQueryer** serves as the input for further structure determination during the refinement step.
+
 ## Build RRUFF Candidate CIF Folders
 
 ```bash
