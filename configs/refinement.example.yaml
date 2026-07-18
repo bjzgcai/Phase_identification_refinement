@@ -1,6 +1,8 @@
 xy: data/Exp_data/R040009.csv
-main: data/RRUFF_data/R040009/R040009.cif
-imp: data/RRUFF_data/R040009
+# Use the rank-1 MP CIF path written in data/RRUFF_data/R040009/model_top1_main.txt.
+main: data/RRUFF_data/R040009/rank_01_mp-xxxxx.cif
+imp: data/RRUFF_data/R040009/model_top1_impurities
 wavelength: 1.541838
-max_candidates: 10
+main_selection: fixed
+max_candidates: 9
 max_phases_in_mix: 4

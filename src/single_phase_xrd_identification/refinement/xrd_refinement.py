@@ -1606,7 +1606,7 @@ def detect_main_phase_by_corr(x: np.ndarray, y: np.ndarray, files: List[str], wa
     return reordered, files[main_idx], reordered_corrs, main_idx
 
 
-def initial_combo_search(x, y, main_cif, top, wavelength, bg_degree, broad_base, main_bias, single_phase=False, max_phases_in_mix=4):
+def initial_combo_search(x, y, main_cif, top, wavelength, bg_degree, broad_base, main_bias, single_phase=False, max_phases_in_mix=4, main_selection='fixed'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     log_event(f"🖥️ 设备：{device}")
     U0, V0, W0, X0, Y0 = 0.003, 0.001, 0.020, 0.020, 0.010
@@ -1614,10 +1614,24 @@ def initial_combo_search(x, y, main_cif, top, wavelength, bg_degree, broad_base,
     pools = [[]] if single_phase else [[]] + [list(c) for k in range(1, max_phases_in_mix) for c in itertools.combinations([f for f, _, _ in top], k)]
     for combo in pools:
         raw_files = [main_cif] + list(combo)
-        files, detected_main, corrs, main_idx_raw = detect_main_phase_by_corr(
-            x, y, raw_files, wavelength=wavelength, broad_base=broad_base,
-            tch_init=(U0, V0, W0, X0, Y0)
-        )
+        if main_selection == 'pearson':
+            files, detected_main, corrs, main_idx_raw = detect_main_phase_by_corr(
+                x, y, raw_files, wavelength=wavelength, broad_base=broad_base,
+                tch_init=(U0, V0, W0, X0, Y0)
+            )
+        else:
+            files = raw_files
+            detected_main = main_cif
+            main_idx_raw = 0
+            corrs = []
+            for f in files:
+                st_corr = ensure_biso_on_structure(Structure.from_file(f))
+                prof_corr = synth_profile_po(
+                    x, st_corr, wl=wavelength, U=U0, V=V0, W=W0, X=X0, Y=Y0,
+                    broad_base=broad_base, enable_po=False
+                )
+                c = float(np.corrcoef(y, prof_corr)[0, 1])
+                corrs.append(c if np.isfinite(c) else -1.0)
         structs = [ensure_biso_on_structure(Structure.from_file(f)) for f in files]
         profiles = [synth_profile_po(x, st, wl=wavelength, U=U0, V=V0, W=W0, X=X0, Y=Y0, broad_base=broad_base, enable_po=False) for st in structs]
         yfit, fr, sf, Rwp0_tmp, _ = torch_refine(
@@ -1636,7 +1650,10 @@ def initial_combo_search(x, y, main_cif, top, wavelength, bg_degree, broad_base,
             }
     corr_msg = format_corr_summary(best['files'], best['corrs'])
     combo_msg = ' + '.join(os.path.basename(f) for f in best['files'])
-    log_event(f"主相识别 | main={best['main_phase']} | pearson=({corr_msg})")
+    if main_selection == 'pearson':
+        log_event(f"主相识别 | main={best['main_phase']} | pearson=({corr_msg})")
+    else:
+        log_event(f"主相固定 | main={best['main_phase']} | strategy=model_top1 | corr=({corr_msg})")
     log_event(f"初选最佳组合 | combo={combo_msg} | Rwp={best['rwp']:.2f}%")
     return best
 
@@ -1652,7 +1669,7 @@ def main(xy_file=None, main_cif='Li6PS5Cl.cif', imp_dir='impure_phase', waveleng
          po_r_bounds=(0.3, 3.0), po_axes_user=None, po_r_init_user=None,
          lambda_stoich=0.5, stoich_phase=None, stoich_target=None,
          num_workers: int = os.cpu_count(), main_bias: float = 1.0,
-         use_rl_guidance: bool = True):
+         use_rl_guidance: bool = True, main_selection: str = 'fixed'):
     if xy_file is None:
         xy_files = [f for f in os.listdir('.') if f.lower().endswith('.xy')]
         if not xy_files:
@@ -1680,7 +1697,7 @@ def main(xy_file=None, main_cif='Li6PS5Cl.cif', imp_dir='impure_phase', waveleng
         cands.append((f, prof, c))
     cands.sort(key=lambda z: z[2], reverse=True)
     top = cands[:max_candidates]
-    best = initial_combo_search(x, y, main_cif, top, wavelength, bg_degree, broad_base, main_bias, single_phase=single_phase, max_phases_in_mix=max_phases_in_mix)
+    best = initial_combo_search(x, y, main_cif, top, wavelength, bg_degree, broad_base, main_bias, single_phase=single_phase, max_phases_in_mix=max_phases_in_mix, main_selection=main_selection)
     detected_main_phase = best.get('main_phase', os.path.basename(main_cif))
     phase_structs = {f: ensure_biso_on_structure(Structure.from_file(f)) for f in best['files']}
     tch_dict = {'U': U0, 'V': V0, 'W': W0, 'X': X0, 'Y': Y0}
@@ -1815,7 +1832,8 @@ if __name__ == '__main__':
     parser.add_argument('--max-candidates', type=int, default=10, help='参与初始组合搜索的候选杂相数量；默认 10，对应每个样品 1+10 个 CIF 全读入筛选')
     parser.add_argument('--max-phases-in-mix', type=int, default=4, help='初始组合搜索的最大总相数，默认 4')
     parser.add_argument('--stage-loops', type=parse_stage_loops, default=(100, 80, 70), help='三阶段循环次数，格式如 100,80,70')
-    parser.add_argument('--main-bias', type=float, default=1.0, help='主相偏置系数 (自动识别主相后用于相组合筛选与后续 torch_refine 初始化)')
+    parser.add_argument('--main-bias', type=float, default=1.0, help='主相偏置系数 (用于相组合筛选与后续 torch_refine 初始化)')
+    parser.add_argument('--main-selection', choices=['fixed', 'pearson'], default='fixed', help='fixed: 固定传入 --main 为主相；pearson: 使用旧版 Pearson 自动重排主相')
     parser.add_argument('--stoich-phase', type=str, default=None, help='指定化学计量约束参考相，默认自动使用相关性最高的主相')
     parser.add_argument('--stoich', type=str, default=None, help='目标化学计量比，例如 "Li:6,S:5,P:1,Cl:1"')
     parser.add_argument('--lambda-stoich', type=float, default=0.5, help='化学计量约束强度 λ_stoich (默认 0.5)')
@@ -1850,4 +1868,5 @@ if __name__ == '__main__':
         po_axes_user=po_axes_dict,
         enable_po=(not args.disable_po),
         use_rl_guidance=(not args.no_rl),
+        main_selection=args.main_selection,
     )

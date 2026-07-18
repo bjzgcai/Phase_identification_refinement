@@ -6,7 +6,7 @@ This repository includes a curated RRUFF experimental subset and a pretrained ch
 
 ```text
 data/
-  Exp_data/              # included: 444 RRUFF experimental spectra and *_CIF.txt files
+  Exp_data/              # included: 222 RRUFF experimental spectra and *_CIF.txt files
   MP_data/               # external: MP-derived simulated/reference pattern files
   mp_spacegroup.json     # external: MP metadata and CIF strings, not redistributed
   entries_dict.json      # external: label -> mp-id mapping, not redistributed
@@ -26,7 +26,7 @@ The two JSON files under `data/` are intentionally ignored by Git because they c
 
 `data/Exp_data/` contains RRUFF experimental spectra and matching structure files derived from external datasets. These data are redistributed as a curated reproducibility subset and remain subject to the original RRUFF/XQueryer data licenses, database terms, and citation requirements.
 
-Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The reference structure derived from **XQueryer** serves as the input for further structure determination during the refinement step.
+Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The documented refinement workflow uses model-retrieved Materials Project structures as inputs: the model Top-1 MP CIF is used as the fixed main phase, and ranks 2-10 are used as impurity candidates. RRUFF-derived structure files are retained only for provenance and evaluation metadata; they are not used as refinement candidates in the model-Top-1 workflow.
 
 The repository MIT license covers project source code only. See `../THIRD_PARTY_NOTICES.md` for source attribution, citation links, artifact hashes, and redistribution notes.
 
@@ -50,8 +50,10 @@ e190ae856a11a2bcd5d5a999f8984bed05e744307b4e49ee690032dd3e6fb52a  data/match.txt
 `RRUFF_data/` is generated and remains ignored by Git. Regenerate it with:
 
 ```bash
-python scripts/build_rruff_data.py   --rank-csv stage2/analysis_results/temp_rank_0.csv   --mp-json data/mp_spacegroup.json   --exp-dir data/Exp_data   --out-dir data/RRUFF_data
+python -m single_phase_xrd_identification.refinement.build_rruff_data   --rank-csv stage2/analysis_results/temp_rank_0.csv   --mp-json data/mp_spacegroup.json   --exp-dir data/Exp_data   --out-dir data/RRUFF_data   --top-k 10
 ```
+
+For each sample, the builder writes `model_top1_main.txt` for the fixed rank-1 MP main phase and `model_top1_impurities/` for rank 2-10 MP impurity candidates. Use these generated paths for refinement rather than the RRUFF-derived provenance CIF.
 
 If you want `temp_rank_0.csv` included in a release, place it under a tracked data or release-artifact location and update the command accordingly.
 

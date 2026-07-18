@@ -163,9 +163,3 @@ The refinement code reads the fixed model Top-1 MP main CIF plus the remaining m
 ## License
 
 See [LICENSE](LICENSE).
-
-The refinement code reads the main CIF plus candidate CIFs and automatically reorders phases by Pearson correlation between the observed pattern and each simulated profile.
-
-## License
-
-See [LICENSE](LICENSE).

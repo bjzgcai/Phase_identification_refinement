@@ -216,6 +216,7 @@ def build_rruff_data(
 
     for rruff_id, mpids in ranked.items():
         target_dir = out_dir / rruff_id
+        top1_imp_dir = target_dir / "model_top1_impurities"
         if target_dir.exists() and not overwrite:
             skipped += 1
             continue
@@ -225,10 +226,14 @@ def build_rruff_data(
             if overwrite:
                 for old_cif in target_dir.glob("*.cif"):
                     old_cif.unlink()
+                if top1_imp_dir.exists():
+                    for old_cif in top1_imp_dir.glob("*.cif"):
+                        old_cif.unlink()
             rruff_cif = target_dir / f"{rruff_id}.cif"
             write_rruff_cif(exp_dir / f"{rruff_id}_CIF.txt", rruff_cif, symprec=symprec)
             manifest_rows.append([rruff_id, "rruff", "", rruff_id, str(rruff_cif)])
 
+            model_top1_main: Path | None = None
             missing_for_rruff: list[tuple[int, str]] = []
             for rank, mpid in mpids:
                 entry = mp_data.get(mpid)
@@ -240,11 +245,36 @@ def build_rruff_data(
                 mp_cif = target_dir / f"rank_{rank:02d}_{mpid}.cif"
                 write_text(mp_cif, entry["cif"])
                 manifest_rows.append([rruff_id, "mp", str(rank), mpid, str(mp_cif)])
+                if rank == 1:
+                    model_top1_main = mp_cif
+                    manifest_rows.append([rruff_id, "model_top1_main", str(rank), mpid, str(mp_cif)])
+                else:
+                    top1_imp_dir.mkdir(parents=True, exist_ok=True)
+                    imp_cif = top1_imp_dir / mp_cif.name
+                    write_text(imp_cif, entry["cif"])
+                    manifest_rows.append([rruff_id, "model_top1_impurity", str(rank), mpid, str(imp_cif)])
 
             cif_count = len(list(target_dir.glob("*.cif")))
+            if model_top1_main is None:
+                raise RuntimeError(f"{rruff_id}: missing rank 1 model candidate; cannot set model Top-1 main phase")
             if missing_for_rruff or cif_count != top_k + 1:
                 missing_msg = ", ".join(f"rank {rank}: {mpid}" for rank, mpid in missing_for_rruff)
                 raise RuntimeError(f"{rruff_id}: expected {top_k + 1} CIFs, found {cif_count}; missing {missing_msg}")
+
+            write_text(target_dir / "model_top1_main.txt", str(model_top1_main))
+            write_text(
+                target_dir / "refinement_model_top1.yaml",
+                "\n".join(
+                    [
+                        f"xy: {exp_dir / f'{rruff_id}.csv'}",
+                        f"entry: {rruff_cif}",
+                        f"main: {model_top1_main}",
+                        f"imp: {top1_imp_dir}",
+                        f"max_candidates: {max(0, top_k - 1)}",
+                        "main_selection: fixed",
+                    ]
+                ),
+            )
             made += 1
         except Exception as exc:
             failed += 1
