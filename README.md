@@ -66,7 +66,7 @@ The project follows a three-stage identification-to-refinement workflow.
 
 3. **Refinement: build CIF candidate folders and run Rietveld-style refinement**
 
-   `src/single_phase_xrd_identification/refinement/build_rruff_data.py` converts the Stage 2 top-10 retrieval output into per-sample CIF folders. Each folder contains the experimental RRUFF CIF reconstructed from `*_CIF.txt` plus the top-10 MP candidate CIFs from `data/mp_spacegroup.json`. `xrd_refinement.py` then refines these candidates and automatically reorders phases by Pearson correlation between the observed pattern and each simulated profile.
+   `src/single_phase_xrd_identification/refinement/build_rruff_data.py` converts the Stage 2 top-10 retrieval output into per-sample CIF folders. The documented refinement workflow uses the model-retrieved MP candidates: the rank-1 MP CIF is used as the fixed main phase, and ranks 2-10 are placed in `model_top1_impurities/` as impurity candidates. A reconstructed RRUFF-derived CIF may be retained in the sample folder for provenance/evaluation metadata, but it is not used as a refinement candidate in the model-Top-1 workflow.
 
    ```bash
    python -m single_phase_xrd_identification.refinement.build_rruff_data \
@@ -76,11 +76,13 @@ The project follows a three-stage identification-to-refinement workflow.
      --out-dir data/RRUFF_data \
      --top-k 10
 
+   MAIN_CIF=$(sed -n '1p' data/RRUFF_data/R040009/model_top1_main.txt)
    python -m single_phase_xrd_identification.refinement.xrd_refinement \
      --xy data/Exp_data/R040009.csv \
-     --main data/RRUFF_data/R040009/R040009.cif \
-     --imp data/RRUFF_data/R040009 \
-     --wl 1.541838
+     --main "$MAIN_CIF" \
+     --imp data/RRUFF_data/R040009/model_top1_impurities \
+     --wl 1.541838 \
+     --main-selection fixed
    ```
 
 ## Space-Group and Crystal-System Analysis
@@ -111,7 +113,7 @@ python src/single_phase_xrd_identification/stage2/spacegroup_crystal-system_accu
 
 This repository intentionally includes the reproducibility artifacts below:
 
-- `data/Exp_data/`: 444 RRUFF experimental spectra and matching `*_CIF.txt` files used by the documented Stage 2/refinement workflow.
+- `data/Exp_data/`: 222 RRUFF experimental spectra plus 222 matching `*_CIF.txt` structure-text files used by the documented Stage 2/refinement workflow.
 - `data/match.txt`: strict RRUFFID <-> MPID matching pairs used for evaluation/reference.
 - `src/single_phase_xrd_identification/stage1/checkpoints_stage1/model_best.pth`: Stage 1 pretrained `state_dict` checkpoint.
 
@@ -141,7 +143,7 @@ Parts of the data preparation and baseline comparison workflow are based on or c
 
 The MIT license in this repository applies to project source code. Redistributed RRUFF experimental spectra, Materials Project-derived reference metadata, XQueryer/PyXplore-derived matching information, and pretrained weights remain subject to their original licenses, database terms, and citation requirements. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before redistributing these artifacts.
 
-Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The reference structure derived from **XQueryer** serves as the input for further structure determination during the refinement step.
+Note: All data are subject to certain tolerances, as no two crystals are perfectly identical. The documented refinement workflow uses model-retrieved MP structures as inputs; RRUFF-derived structure files are retained only for provenance and evaluation metadata.
 
 ## Build RRUFF Candidate CIF Folders
 
@@ -152,8 +154,15 @@ python -m single_phase_xrd_identification.refinement.build_rruff_data   --rank-c
 ## Run Refinement
 
 ```bash
-python -m single_phase_xrd_identification.refinement.xrd_refinement   --xy path/to/R040009.csv   --main path/to/RRUFF_data/R040009/R040009.cif   --imp path/to/RRUFF_data/R040009   --wl 1.541838
+MAIN_CIF=$(sed -n '1p' path/to/RRUFF_data/R040009/model_top1_main.txt)
+python -m single_phase_xrd_identification.refinement.xrd_refinement   --xy path/to/R040009.csv   --main "$MAIN_CIF"   --imp path/to/RRUFF_data/R040009/model_top1_impurities   --wl 1.541838   --main-selection fixed
 ```
+
+The refinement code reads the fixed model Top-1 MP main CIF plus the remaining model-retrieved MP impurity candidates.
+
+## License
+
+See [LICENSE](LICENSE).
 
 The refinement code reads the main CIF plus candidate CIFs and automatically reorders phases by Pearson correlation between the observed pattern and each simulated profile.
 
